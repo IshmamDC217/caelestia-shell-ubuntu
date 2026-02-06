@@ -8,13 +8,42 @@ A complete guide to installing [Caelestia Shell](https://github.com/caelestia-do
 
 > **Note**: Caelestia was designed for Arch Linux (AUR packages). This guide covers building everything from source on Ubuntu.
 
+## Why This Repo
+
+- One script for a clean, repeatable setup
+- Source builds for Quickshell, Caelestia CLI, libcava, and Caelestia Shell
+- Working configs you can copy as-is or tweak
+- Clear manual steps when you want full control
+
+## Live Preview
+
+<p align="center">
+  <img src="public/cu1.gif" alt="Caelestia Shell preview 1" width="90%">
+</p>
+<p align="center">
+  <img src="public/cu2.gif" alt="Caelestia Shell preview 2" width="90%">
+</p>
+<p align="center">
+  <img src="public/cu3.gif" alt="Caelestia Shell preview 3" width="90%">
+</p>
+
+## Contents
+
+- [Quick Install](#quick-install)
+- [Files Included](#files-included)
+- [Manual Installation](#manual-installation)
+- [Running the Shell](#running-the-shell)
+- [Troubleshooting](#troubleshooting)
+- [Credits](#credits)
+- [License](#license)
+
 ## Quick Install
 
 **Prerequisites:** Ubuntu 25.10 with Hyprland already installed (see [Step 1](#step-1-install-hyprland) below).
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/caelestia-ubuntu-guide.git
-cd caelestia-ubuntu-guide
+git clone https://github.com/IshmamDC217/caelestia-shell-ubuntu.git
+cd caelestia-shell-ubuntu
 ./install.sh
 ```
 
@@ -35,7 +64,7 @@ Build sources are kept in `~/caelestia-build/` and can be removed after installa
 | `config/quickshell/qml_color.json` | `~/.config/quickshell/qml_color.json` | Quickshell color theme |
 | `config/hypr/hyprland.conf` | `~/.config/hypr/hyprland.conf` | Hyprland config (reference only) |
 | `config/bashrc.snippet` | append to `~/.bashrc` | QML_IMPORT_PATH environment variable |
-| `install.sh` | — | Automated installer script |
+| `install.sh` | -- | Automated installer script |
 
 ### Environment Setup
 
@@ -281,4 +310,3 @@ export QML_IMPORT_PATH=/usr/lib/qt6/qml
 ## License
 
 GPL-3.0
-# caelestia-ubuntu-guide
