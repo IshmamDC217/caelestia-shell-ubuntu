@@ -299,11 +299,11 @@ Use `-DCMAKE_INSTALL_PREFIX=/` (not `/usr`).
 ```bash
 export QML_IMPORT_PATH=/usr/lib/qt6/qml
 ```
-
 ## Credits
 
-- [Caelestia Dots](https://github.com/caelestia-dots) - Original shell
-- [Quickshell](https://quickshell.outfoxxed.me/) by [@outfoxxed](https://github.com/outfoxxed)
+- [Caelestia Dots](https://github.com/caelestia-dots) - Original shell by Scout
+- [Hyprland](https://hyprland.org/) by [@vaxry](https://github.com/vaxerski) - Wayland compositor
+- [Quickshell](https://quickshell.outfoxxed.me/) by [@outfoxxed](https://github.com/outfoxxed) - Shell framework
 - [JaKooLit](https://github.com/JaKooLit) - Ubuntu Hyprland installer
 - [LukashonakV](https://github.com/LukashonakV) - libcava fork
 
