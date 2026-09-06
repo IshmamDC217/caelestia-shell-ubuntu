@@ -23,6 +23,8 @@ ones, not reconstructed from memory.
 - [HiDPI scaling](#hidpi-scaling)
 - [Configuring the shell](#configuring-the-shell)
 - [Desktop overview and other JaKooLit extras](#desktop-overview-and-other-jakoolit-extras)
+- [Keeping the shell running](#keeping-the-shell-running)
+- [Qt icon themes](#qt-icon-themes)
 - [Troubleshooting](#troubleshooting)
 - [Credits](#credits)
 
@@ -489,6 +491,94 @@ Caelestia's own upstream bindings, for reference:
 
 ---
 
+## Keeping the shell running
+
+Upstream autostarts the shell with `exec-once = caelestia shell -d`, which runs
+**once, at login**. If Quickshell crashes - and it can, see
+[The Qt 6.10 problem](#the-qt-610-problem) - your bar simply disappears until
+you relaunch it by hand. Nothing supervises it.
+
+A systemd user service fixes that. Install
+[`config/26.04/systemd/caelestia-shell.service`](../config/26.04/systemd/caelestia-shell.service)
+to `~/.config/systemd/user/`:
+
+```ini
+[Service]
+Type=simple
+Environment=QML_IMPORT_PATH=/usr/lib/qt6/qml
+ExecStart=/usr/bin/qs -c caelestia -n
+Restart=on-failure
+RestartSec=2
+StartLimitBurst=5
+StartLimitIntervalSec=300
+```
+
+The burst limit matters: without it, a genuinely broken config gets restarted
+in a tight loop forever instead of failing visibly.
+
+Then replace the `exec-once` line in `hyprland.conf`:
+
+```bash
+exec-once = bash -c 'systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP HYPRLAND_INSTANCE_SIGNATURE && systemctl --user start caelestia-shell.service'
+```
+
+> **The `import-environment` step is required.** A plain (non-uwsm) Hyprland
+> session does not populate the systemd user manager with `WAYLAND_DISPLAY` or
+> `HYPRLAND_INSTANCE_SIGNATURE`, so the service starts with no display to
+> connect to and fails immediately. Under a **uwsm** session this is handled
+> for you and the line can be just `systemctl --user start caelestia-shell.service`.
+
+Manage it with:
+
+```bash
+systemctl --user restart caelestia-shell    # after editing shell.json
+systemctl --user stop caelestia-shell       # stop WITHOUT auto-restart
+journalctl --user -u caelestia-shell -f     # live log
+```
+
+Verify the supervision actually works rather than trusting it - kill it and
+watch it come back:
+
+```bash
+kill -SEGV "$(pgrep -f 'qs -c caelestia')"
+sleep 3 && systemctl --user is-active caelestia-shell
+```
+
+> Expect roughly **650 MB** resident, peaking near 1 GB. That is normal for
+> Quickshell/QML, not a leak.
+
+## Qt icon themes
+
+Qt applications under Hyprland **do not inherit the GNOME icon theme**. If the
+theme named in your GNOME settings is not actually installed, every
+`QIcon::fromTheme` lookup falls through to `hicolor`, finds nothing, and the
+shell logs:
+
+```
+WARN: Could not load icon "preferences-system-network?fallback=image-missing"
+WARN: Could not load icon "input-keyboard?fallback=image-missing"
+```
+
+with blank tray and status icons. Install a real theme and point Qt at it:
+
+```bash
+sudo apt install papirus-icon-theme
+```
+
+`~/.config/qt6ct/qt6ct.conf`:
+
+```ini
+[Appearance]
+icon_theme=Papirus-Dark
+style=Fusion
+```
+
+The bundled `hyprland.conf` already exports `QT_QPA_PLATFORMTHEME=qt6ct`, so
+this takes effect on the next shell restart. `Yaru`, shipped with Ubuntu, also
+works if you would rather not add a package.
+
+---
+
 ## Troubleshooting
 
 ### The shell will not start
@@ -518,6 +608,15 @@ Use `-DCMAKE_INSTALL_PREFIX=/`, not `/usr`.
 ### `VERSION is not set and failed to get from git`
 
 Shallow clone. `git fetch --unshallow --tags`.
+
+### The bar disappears and does not come back
+
+Nothing supervises the shell by default. See
+[Keeping the shell running](#keeping-the-shell-running).
+
+### `Could not load icon ...` warnings, blank tray icons
+
+Qt is not picking up an icon theme. See [Qt icon themes](#qt-icon-themes).
 
 ### The bar shows words like `terminal`, `web`, `ndar_r` instead of icons
 

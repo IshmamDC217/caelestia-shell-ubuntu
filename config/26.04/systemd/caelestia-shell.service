@@ -1,0 +1,21 @@
+[Unit]
+Description=Caelestia Shell (Quickshell)
+Documentation=https://github.com/caelestia-dots/shell
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=simple
+Environment=QML_IMPORT_PATH=/usr/lib/qt6/qml
+ExecStart=/usr/bin/qs -c caelestia -n
+# The shell has segfaulted in libQt6Core at least once; without this the bar
+# simply disappears until it is relaunched by hand.
+Restart=on-failure
+RestartSec=2
+# Do not fight a genuinely broken config: give up after 5 crashes in 5 minutes.
+StartLimitBurst=5
+StartLimitIntervalSec=300
+Slice=session.slice
+
+[Install]
+WantedBy=graphical-session.target

@@ -42,7 +42,7 @@ sudo apt-get install -y \
     xdg-desktop-portal-hyprland \
     uwsm \
     waybar dunst fuzzel kitty wlogout swayosd nwg-displays nwg-look \
-    qt5ct qt6ct pavucontrol \
+    qt5ct qt6ct pavucontrol papirus-icon-theme \
     hyprland-plugin-hyprexpo
 
 # `hyprland` ships hyprland-uwsm.desktop but neither Depends nor Recommends
@@ -240,6 +240,22 @@ install_config() {
 install_config "$SCRIPT_DIR/config/26.04/shell.json"  ~/.config/caelestia/shell.json
 install_config "$SCRIPT_DIR/config/26.04/quickshell/qml_color.json" ~/.config/quickshell/qml_color.json
 install_config "$SCRIPT_DIR/config/26.04/hyprland.conf" ~/.config/hypr/hyprland.conf
+
+# Qt apps under Hyprland do NOT inherit GNOME's icon theme. Without this every
+# QIcon::fromTheme lookup falls through to hicolor and the shell logs
+# "Could not load icon ..." with blank tray/status icons.
+mkdir -p ~/.config/qt6ct
+install_config "$SCRIPT_DIR/config/26.04/qt6ct/qt6ct.conf" ~/.config/qt6ct/qt6ct.conf
+
+# Supervise the shell. Upstream's `exec-once = caelestia shell -d` runs once at
+# login, so a crash leaves no bar until it is relaunched by hand.
+mkdir -p ~/.config/systemd/user
+install_config "$SCRIPT_DIR/config/26.04/systemd/caelestia-shell.service" \
+    ~/.config/systemd/user/caelestia-shell.service
+systemctl --user daemon-reload 2>/dev/null || true
+systemctl --user enable caelestia-shell.service 2>/dev/null \
+    && ok "Shell supervised by systemd (auto-restarts on crash)" \
+    || warn "Could not enable caelestia-shell.service"
 
 if Hyprland --verify-config 2>&1 | grep -q "config ok"; then
     ok "Hyprland config verified"

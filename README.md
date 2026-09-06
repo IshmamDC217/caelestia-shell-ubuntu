@@ -35,6 +35,11 @@ Qt 6.11. Three things break, and this repo carries a
 [89-line patch](patches/qt6.10-compat.patch) that fixes all of them - fully
 explained in [the 26.04 guide](docs/ubuntu-26.04.md#the-qt-610-problem).
 
+**Nothing supervises the shell.** Upstream autostarts it once at login, so a
+crash leaves you with no bar until you relaunch by hand. The guide ships a
+[systemd user service](config/26.04/systemd/caelestia-shell.service) that
+restarts it automatically.
+
 **Three fonts are required, not one.** Missing `Material Symbols Rounded`
 makes the shell render icon *ligature names* as literal text spilling out of
 the bar - it looks like a broken layout but is just a missing font. See
