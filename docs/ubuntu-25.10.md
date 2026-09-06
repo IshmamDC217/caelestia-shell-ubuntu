@@ -163,6 +163,13 @@ sudo apt install -y \
 ```
 
 ### Step 3: Install Nerd Fonts
+
+> **This step is incomplete.** Caelestia also needs `Material Symbols Rounded`
+> (all icons) and `Rubik` (clock, workspaces). Without Material Symbols the bar
+> renders icon ligature names as literal text. See
+> [Step 3 of the 26.04 guide](ubuntu-26.04.md#step-3-fonts) - the fonts are a
+> Caelestia requirement, not an Ubuntu-version one.
+
 ```bash
 mkdir -p ~/.local/share/fonts
 cd /tmp

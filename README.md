@@ -35,6 +35,11 @@ Qt 6.11. Three things break, and this repo carries a
 [89-line patch](patches/qt6.10-compat.patch) that fixes all of them - fully
 explained in [the 26.04 guide](docs/ubuntu-26.04.md#the-qt-610-problem).
 
+**Three fonts are required, not one.** Missing `Material Symbols Rounded`
+makes the shell render icon *ligature names* as literal text spilling out of
+the bar - it looks like a broken layout but is just a missing font. See
+[Step 3: Fonts](docs/ubuntu-26.04.md#step-3-fonts).
+
 **HiDPI laptops need a manual scale.** Hyprland's `auto` picks 2.0 on a 14"
 QHD panel, leaving 1280x720 of logical space and making everything look
 oversized on the laptop while an external monitor looks fine. The guide covers

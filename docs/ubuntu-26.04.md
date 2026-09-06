@@ -112,15 +112,56 @@ dead:
 | `libiniparser-dev` | `iniparser library is required` (libcava) |
 | `qt6-image-formats-plugins` | `Failed to decode source: wallpaper.webp` - Ubuntu ships only gif/ico/jpeg/svg decoders, and Caelestia's default wallpaper is webp |
 
-### Step 3: CascadiaCode Nerd Font
+### Step 3: Fonts
+
+**Caelestia needs three font families, and getting this wrong is the single
+most confusing failure in the whole setup.**
+
+| Font | Used for |
+|---|---|
+| `Material Symbols Rounded` | every icon in the shell |
+| `Rubik` | clock and workspace labels |
+| `CaskaydiaCove NF` | monospace |
 
 ```bash
 mkdir -p ~/.local/share/fonts && cd /tmp
+
+# Nerd Font (monospace)
 wget https://github.com/ryanoasis/nerd-fonts/releases/download/v3.3.0/CascadiaCode.zip
 unzip CascadiaCode.zip -d CascadiaCode
 cp CascadiaCode/*.ttf ~/.local/share/fonts/
+
+# Material Symbols Rounded (icons)
+wget -O ~/.local/share/fonts/"MaterialSymbolsRounded[FILL,GRAD,opsz,wght].ttf" \
+  "https://github.com/google/material-design-icons/raw/master/variablefont/MaterialSymbolsRounded%5BFILL%2CGRAD%2Copsz%2Cwght%5D.ttf"
+
+# Rubik (clock, workspaces)
+wget -O ~/.local/share/fonts/"Rubik[wght].ttf" \
+  "https://github.com/googlefonts/rubik/raw/main/fonts/variable/Rubik%5Bwght%5D.ttf"
+wget -O ~/.local/share/fonts/"Rubik-Italic[wght].ttf" \
+  "https://github.com/googlefonts/rubik/raw/main/fonts/variable/Rubik-Italic%5Bwght%5D.ttf"
+
 fc-cache -f
 ```
+
+Verify all three resolve to themselves and not to a fallback:
+
+```bash
+for f in "Material Symbols Rounded" "Rubik" "CaskaydiaCove NF"; do fc-match "$f"; done
+```
+
+If any line comes back as `NotoSans-Regular.ttf`, that font is missing.
+
+> **Why this matters so much.** Material Symbols renders icons from
+> **ligatures** - the shell writes the literal word `terminal` and the font
+> turns it into an icon. With the font missing, fontconfig silently falls back
+> to Noto Sans and you get the *words themselves* rendered into the bar,
+> overflowing and clipping: `rmin`, `web`, `ndar_r`. It looks like a broken
+> layout or a scaling bug, but nothing is wrong with the layout at all.
+
+> **Do not use `fonts-material-design-icons-iconfont` from apt.** That is the
+> older Material Design Icons project - different family name, different
+> ligature set. It will not satisfy `Material Symbols Rounded`.
 
 ### Step 4: Build Quickshell
 
@@ -429,6 +470,16 @@ Use `-DCMAKE_INSTALL_PREFIX=/`, not `/usr`.
 ### `VERSION is not set and failed to get from git`
 
 Shallow clone. `git fetch --unshallow --tags`.
+
+### The bar shows words like `terminal`, `web`, `ndar_r` instead of icons
+
+The `Material Symbols Rounded` font is missing and fontconfig has fallen back
+to a text font, so icon ligature names render literally. See
+[Step 3: Fonts](#step-3-fonts). Check with:
+
+```bash
+fc-match "Material Symbols Rounded"   # must NOT say NotoSans
+```
 
 ### Everything is huge on the laptop but fine on the external monitor
 

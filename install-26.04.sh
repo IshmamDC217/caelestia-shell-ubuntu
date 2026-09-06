@@ -77,21 +77,58 @@ sudo apt-get install -y \
 ok "Build dependencies installed"
 
 # ---------------------------------------------------------------- Step 3/8 --
-step "Step 3/8: CascadiaCode Nerd Font"
+step "Step 3/8: Fonts"
+
+# Caelestia needs THREE font families, not just the Nerd Font:
+#   Material Symbols Rounded - every icon in the shell. It renders icons from
+#     LIGATURES, so without it you see the literal words ("terminal", "web",
+#     "calendar_month") spilling out of the bar instead of glyphs.
+#   Rubik                    - clock and workspace labels
+#   CaskaydiaCove NF         - monospace
+# Ubuntu's fonts-material-design-icons-iconfont is the OLDER Material Design
+# Icons: different family name, different ligatures. It will not work.
+
+mkdir -p ~/.local/share/fonts
+FONT_TMP="$(mktemp -d)"
+trap 'rm -rf "$FONT_TMP"' EXIT
 
 if fc-list | grep -qi "CaskaydiaCove"; then
-    ok "Already installed, skipping"
+    ok "CascadiaCode Nerd Font already installed"
 else
-    mkdir -p ~/.local/share/fonts
-    FONT_TMP="$(mktemp -d)"
     wget -q --show-progress -O "$FONT_TMP/CascadiaCode.zip" \
         https://github.com/ryanoasis/nerd-fonts/releases/download/v3.3.0/CascadiaCode.zip
     unzip -qo "$FONT_TMP/CascadiaCode.zip" -d "$FONT_TMP/CascadiaCode"
     cp "$FONT_TMP"/CascadiaCode/*.ttf ~/.local/share/fonts/
-    fc-cache -f >/dev/null
-    rm -rf "$FONT_TMP"
-    ok "Nerd Font installed"
+    ok "CascadiaCode Nerd Font installed"
 fi
+
+if fc-list | grep -qi "Material Symbols Rounded"; then
+    ok "Material Symbols Rounded already installed"
+else
+    wget -q --show-progress -O ~/.local/share/fonts/"MaterialSymbolsRounded[FILL,GRAD,opsz,wght].ttf" \
+        "https://github.com/google/material-design-icons/raw/master/variablefont/MaterialSymbolsRounded%5BFILL%2CGRAD%2Copsz%2Cwght%5D.ttf"
+    ok "Material Symbols Rounded installed"
+fi
+
+if fc-list | grep -qi "Rubik"; then
+    ok "Rubik already installed"
+else
+    wget -q --show-progress -O ~/.local/share/fonts/"Rubik[wght].ttf" \
+        "https://github.com/googlefonts/rubik/raw/main/fonts/variable/Rubik%5Bwght%5D.ttf"
+    wget -q --show-progress -O ~/.local/share/fonts/"Rubik-Italic[wght].ttf" \
+        "https://github.com/googlefonts/rubik/raw/main/fonts/variable/Rubik-Italic%5Bwght%5D.ttf"
+    ok "Rubik installed"
+fi
+
+fc-cache -f >/dev/null
+
+for family in "Material Symbols Rounded" "Rubik" "CaskaydiaCove NF"; do
+    if fc-match "$family" | grep -qi "$(echo "$family" | tr -d ' ' | cut -c1-6)"; then
+        ok "  $family resolves"
+    else
+        warn "  $family does NOT resolve - icons or text will look wrong"
+    fi
+done
 
 # ---------------------------------------------------------------- Step 4/8 --
 step "Step 4/8: Build Quickshell (not packaged in 26.04)"
