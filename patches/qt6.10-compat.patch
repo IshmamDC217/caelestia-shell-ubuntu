@@ -1,0 +1,171 @@
+diff --git a/components/controls/DoubleSpinBox.qml b/components/controls/DoubleSpinBox.qml
+new file mode 100644
+index 00000000..604541d6
+--- /dev/null
++++ b/components/controls/DoubleSpinBox.qml
+@@ -0,0 +1,73 @@
++pragma ComponentBehavior: Bound
++
++// Compatibility shim for Ubuntu 26.04.
++// QtQuick.Templates.DoubleSpinBox was introduced in Qt 6.11; Ubuntu 26.04
++// ships Qt 6.10.2. This provides the subset of the API that
++// components/controls/StyledSpinBox.qml relies on. Delete this file once
++// Ubuntu ships Qt >= 6.11.
++
++import QtQuick
++import QtQuick.Templates as T
++
++T.Control {
++    id: control
++
++    property real from: 0
++    property real to: 99
++    property real value: 0
++    property real stepSize: 1
++    property int decimals: 0
++    property bool editable: false
++    property var spinLocale: Qt.locale()
++
++    property DoubleValidator validator: DoubleValidator {
++        bottom: Math.min(control.from, control.to)
++        top: Math.max(control.from, control.to)
++        decimals: control.decimals
++        notation: DoubleValidator.StandardNotation
++    }
++
++    signal valueModified
++
++    function textFromValue(value: real, locale: var): string {
++        return Number(value).toFixed(control.decimals);
++    }
++
++    function valueFromText(text: string, locale: var): real {
++        return parseFloat(text);
++    }
++
++    // A concrete type is required: assigning `up.indicator` from outside
++    // resolves against the *declared* type, and bare QtObject has no such
++    // property.
++    component IndicatorSlot: QtObject {
++        property Item parentItem
++        property Item indicator
++
++        onIndicatorChanged: {
++            if (indicator && parentItem)
++                indicator.parent = parentItem;
++        }
++    }
++
++    readonly property IndicatorSlot up: IndicatorSlot {
++        parentItem: control
++    }
++
++    readonly property IndicatorSlot down: IndicatorSlot {
++        parentItem: control
++    }
++
++    Connections {
++        target: control.contentItem
++        ignoreUnknownSignals: true
++
++        function onEditingFinished(): void {
++            const v = control.valueFromText(control.contentItem.text, control.spinLocale);
++            if (!isNaN(v)) {
++                control.value = Math.max(control.from, Math.min(control.to, v));
++                control.valueModified();
++            }
++        }
++    }
++}
+diff --git a/components/effects/Elevation.qml b/components/effects/Elevation.qml
+index 9b8822c5..5796f3bd 100644
+--- a/components/effects/Elevation.qml
++++ b/components/effects/Elevation.qml
+@@ -7,6 +7,14 @@ RectangularShadow {
+     property int level
+     property real dp: [0, 1, 3, 6, 8, 12][level]
+ 
++    // Ubuntu 26.04 compat: RectangularShadow gained per-corner radii in
++    // Qt 6.11. Ubuntu ships 6.10.2, so accept and ignore them - the shadow
++    // falls back to the uniform `radius`. Cosmetic only.
++    property real topLeftRadius: radius
++    property real topRightRadius: radius
++    property real bottomLeftRadius: radius
++    property real bottomRightRadius: radius
++
+     color: Qt.alpha(Colours.palette.m3shadow, 0.7)
+     blur: (dp * 5) ** 0.7
+     spread: -dp * 0.3 + (dp * 0.1) ** 2
+diff --git a/modules/lock/center/InputField.qml b/modules/lock/center/InputField.qml
+index e25166b6..5f0f6aaf 100644
+--- a/modules/lock/center/InputField.qml
++++ b/modules/lock/center/InputField.qml
+@@ -118,7 +118,7 @@ Item {
+     }
+ 
+     component CharItem: Item {
+-        id: char
++        id: charItem
+ 
+         required property int index
+         property real nonAnimWidthScale: 1
+@@ -135,7 +135,7 @@ Item {
+ 
+             anchors.centerIn: parent
+             implicitSize: charList.implicitHeight * 1.5
+-            shape: root.shapeQueue[char.index % root.shapeQueue.length] ?? MaterialShape.Circle
++            shape: root.shapeQueue[charItem.index % root.shapeQueue.length] ?? MaterialShape.Circle
+             color: Colours.palette.m3onSurface
+ 
+             Behavior on color {
+@@ -163,14 +163,14 @@ Item {
+                         type: Anim.FastSpatial
+                     }
+                     Anim {
+-                        target: char
++                        target: charItem
+                         property: "implicitWidth"
+                         from: charList.implicitHeight
+                         to: charList.implicitHeight * 1.3
+                         type: Anim.DefaultEffects
+                     }
+                     PropertyAction {
+-                        target: char
++                        target: charItem
+                         property: "nonAnimWidthScale"
+                         value: 1.5
+                     }
+@@ -191,13 +191,13 @@ Item {
+                         type: Anim.FastSpatial
+                     }
+                     Anim {
+-                        target: char
++                        target: charItem
+                         property: "implicitWidth"
+                         to: charList.implicitHeight
+                         type: Anim.DefaultEffects
+                     }
+                     PropertyAction {
+-                        target: char
++                        target: charItem
+                         property: "nonAnimWidthScale"
+                         value: 1
+                     }
+@@ -208,7 +208,7 @@ Item {
+                 id: removeAnim
+ 
+                 PropertyAction {
+-                    target: char
++                    target: charItem
+                     property: "ListView.delayRemove"
+                     value: true
+                 }
+@@ -226,7 +226,7 @@ Item {
+                     }
+                 }
+                 PropertyAction {
+-                    target: char
++                    target: charItem
+                     property: "ListView.delayRemove"
+                     value: false
+                 }

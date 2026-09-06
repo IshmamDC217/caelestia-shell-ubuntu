@@ -1,21 +1,51 @@
 # Caelestia Shell on Ubuntu
 
-[![Ubuntu](https://img.shields.io/badge/Ubuntu-25.10-E95420?style=for-the-badge&logo=ubuntu&logoColor=white)](https://ubuntu.com/)
+[![Ubuntu](https://img.shields.io/badge/Ubuntu-26.04_LTS-E95420?style=for-the-badge&logo=ubuntu&logoColor=white)](https://ubuntu.com/)
 [![Hyprland](https://img.shields.io/badge/Hyprland-58E1FF?style=for-the-badge&logo=wayland&logoColor=black)](https://hyprland.org/)
 [![License](https://img.shields.io/badge/License-GPL--3.0-blue?style=for-the-badge)](LICENSE)
 
-A complete guide to installing [Caelestia Shell](https://github.com/caelestia-dots/shell) on Ubuntu 25.10. Caelestia is a beautiful, feature-rich desktop shell built with Quickshell for Hyprland.
+Running [Caelestia Shell](https://github.com/caelestia-dots/shell) - a
+Quickshell desktop shell built for Hyprland - on Ubuntu, where it was never
+meant to run. Caelestia targets Arch and its AUR packages; these guides build
+the whole toolchain from source instead.
 
-> **Note**: Caelestia was designed for Arch Linux (AUR packages). This guide covers building everything from source on Ubuntu.
+Every step in both guides was run on a real machine.
 
-## Why This Repo
+## Pick your Ubuntu version
 
-- One script for a clean, repeatable setup
-- Source builds for Quickshell, Caelestia CLI, libcava, and Caelestia Shell
-- Working configs you can copy as-is or tweak
-- Clear manual steps when you want full control
+| | Guide | Installer |
+|---|---|---|
+| **Ubuntu 26.04 LTS** (Resolute Raccoon) | **[docs/ubuntu-26.04.md](docs/ubuntu-26.04.md)** | [`install-26.04.sh`](install-26.04.sh) |
+| Ubuntu 25.10 | [docs/ubuntu-25.10.md](docs/ubuntu-25.10.md) | [`install-25.10.sh`](install-25.10.sh) |
 
-## Live Preview
+```bash
+git clone https://github.com/IshmamDC217/caelestia-shell-ubuntu.git
+cd caelestia-shell-ubuntu
+./install-26.04.sh      # or ./install-25.10.sh
+```
+
+## What is different on 26.04
+
+**Hyprland is packaged.** `apt install hyprland` gets you 0.53.3, plus
+`hypridle`, `hyprlock`, `hyprpicker`, `hyprpolkitagent` and nine plugins. The
+third-party installer the 25.10 guide relied on is no longer needed.
+
+**Qt is one version too old.** 26.04 ships Qt 6.10.2; current Caelestia needs
+Qt 6.11. Three things break, and this repo carries a
+[89-line patch](patches/qt6.10-compat.patch) that fixes all of them - fully
+explained in [the 26.04 guide](docs/ubuntu-26.04.md#the-qt-610-problem).
+
+**HiDPI laptops need a manual scale.** Hyprland's `auto` picks 2.0 on a 14"
+QHD panel, leaving 1280x720 of logical space and making everything look
+oversized on the laptop while an external monitor looks fine. The guide covers
+[which scales are safe](docs/ubuntu-26.04.md#hidpi-scaling).
+
+**Hyprland 0.53 changed its config schema.** The `gestures {}` block and
+one-line `windowrule =` are both gone. The bundled
+[`hyprland.conf`](config/26.04/hyprland.conf) is self-contained, uses the new
+syntax, and passes `Hyprland --verify-config`.
+
+## Live preview
 
 <p align="center">
   <img src="public/cu1.gif" alt="Caelestia Shell preview 1" width="90%">
@@ -27,285 +57,25 @@ A complete guide to installing [Caelestia Shell](https://github.com/caelestia-do
   <img src="public/cu3.gif" alt="Caelestia Shell preview 3" width="90%">
 </p>
 
-## Contents
+## Repository layout
 
-- [Quick Install](#quick-install)
-- [Files Included](#files-included)
-- [Manual Installation](#manual-installation)
-- [Running the Shell](#running-the-shell)
-- [Troubleshooting](#troubleshooting)
-- [Credits](#credits)
-- [License](#license)
-
-## Quick Install
-
-**Prerequisites:** Ubuntu 25.10 with Hyprland already installed (see [Step 1](#step-1-install-hyprland) below).
-
-```bash
-git clone https://github.com/IshmamDC217/caelestia-shell-ubuntu.git
-cd caelestia-shell-ubuntu
-./install.sh
+```
+docs/ubuntu-26.04.md          the 26.04 guide
+docs/ubuntu-25.10.md          the 25.10 guide
+install-26.04.sh              automated 26.04 installer
+install-25.10.sh              automated 25.10 installer
+patches/qt6.10-compat.patch   makes current Caelestia build on Qt 6.10.2
+config/26.04/                 hyprland.conf, shell.json, qml_color.json
+config/25.10/                 the original configs
 ```
 
-The script will:
-- Install all APT dependencies in one go
-- Download and install CascadiaCode Nerd Font
-- Build and install Quickshell, libcava, Caelestia CLI, and Caelestia Shell
-- Set up library paths and environment variables
-- Copy included config files to the right locations
-
-Build sources are kept in `~/caelestia-build/` and can be removed after installation.
-
-## Files Included
-
-| File | Destination | Description |
-|------|-------------|-------------|
-| `config/shell.json` | `~/.config/caelestia/shell.json` | Caelestia shell configuration |
-| `config/quickshell/qml_color.json` | `~/.config/quickshell/qml_color.json` | Quickshell color theme |
-| `config/hypr/hyprland.conf` | `~/.config/hypr/hyprland.conf` | Hyprland config (reference only) |
-| `config/bashrc.snippet` | append to `~/.bashrc` | QML_IMPORT_PATH environment variable |
-| `install.sh` | -- | Automated installer script |
-
-### Environment Setup
-
-The QML import path must be set for Caelestia to find its modules:
-
-**In `~/.bashrc`** (for terminal/CLI usage):
-```bash
-export QML_IMPORT_PATH=/usr/lib/qt6/qml
-```
-
-**In `~/.config/hypr/hyprland.conf`** (for Hyprland session):
-```bash
-env = QML_IMPORT_PATH,/usr/lib/qt6/qml
-```
-
-The install script handles the bashrc entry automatically. The hyprland.conf line must be added manually if not already present.
-
----
-
-## Manual Installation
-
-### Prerequisites
-
-- Ubuntu 25.10 (may work on 24.04 with adjustments)
-- A working Wayland session
-- ~2GB free disk space for building
-
-### Step 1: Install Hyprland
-
-Use [JaKooLit's Ubuntu-Hyprland](https://github.com/JaKooLit/Ubuntu-Hyprland) installer:
-```bash
-git clone -b 25.10 --depth=1 https://github.com/JaKooLit/Ubuntu-Hyprland.git ~/Ubuntu-Hyprland-25.10
-cd ~/Ubuntu-Hyprland-25.10
-chmod +x install.sh
-./install.sh
-```
-
-**Recommended options:**
-| Prompt | Recommended |
-|--------|-------------|
-| Monitor resolution | Option 2 (>= 1440p) |
-| GTK Themes | Yes |
-| Thunar | Yes |
-| SDDM | No (keep GDM) |
-| XDG-Desktop-Portal-Hyprland | Yes |
-| Preconfigured Dotfiles | Yes |
-| Add to input group | Yes |
-
-Reboot and select "Hyprland" from GDM.
-
-### Step 2: Install Dependencies
-
-#### Base Build Tools
-```bash
-sudo apt update
-sudo apt install -y build-essential cmake ninja-build git pkg-config meson
-```
-
-#### Qt6 Dependencies
-```bash
-sudo apt install -y \
-    qt6-base-dev \
-    qt6-declarative-dev \
-    qt6-svg-dev \
-    qt6-wayland-dev \
-    qt6-wayland \
-    qt6-shader-baker \
-    libqt6svg6 \
-    libwayland-dev \
-    wayland-protocols \
-    libjemalloc-dev \
-    libpipewire-0.3-dev \
-    libxcb1-dev \
-    libdrm-dev
-```
-
-#### Caelestia Dependencies
-```bash
-sudo apt install -y \
-    python3-pip \
-    python3-build \
-    python3-hatchling \
-    libnotify-bin \
-    grim \
-    slurp \
-    wl-clipboard \
-    fish \
-    brightnessctl \
-    ddcutil \
-    lm-sensors \
-    swappy \
-    libqalculate-dev \
-    libaubio-dev
-```
-
-### Step 3: Install Nerd Fonts
-```bash
-mkdir -p ~/.local/share/fonts
-cd /tmp
-wget https://github.com/ryanoasis/nerd-fonts/releases/download/v3.3.0/CascadiaCode.zip
-unzip CascadiaCode.zip -d CascadiaCode
-cp CascadiaCode/*.ttf ~/.local/share/fonts/
-fc-cache -fv
-```
-
-### Step 4: Build Quickshell
-```bash
-cd ~
-git clone https://git.outfoxxed.me/quickshell/quickshell.git
-cd quickshell
-
-cmake -GNinja -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-    -DCMAKE_INSTALL_PREFIX=/usr \
-    -DCRASH_REPORTER=OFF \
-    -DINSTALL_QML_PREFIX=lib/qt6/qml
-
-cmake --build build
-sudo cmake --install build
-```
-
-### Step 5: Build libcava
-
-> **Important**: Use [LukashonakV/cava](https://github.com/LukashonakV/cava) fork, NOT karlstav/cava.
-```bash
-cd ~
-git clone https://github.com/LukashonakV/cava.git libcava
-cd libcava
-
-meson setup build --buildtype=release -Ddefault_library=shared
-meson compile -C build
-sudo meson install -C build
-```
-
-Configure library path:
-```bash
-echo "/usr/local/lib/x86_64-linux-gnu" | sudo tee /etc/ld.so.conf.d/libcava.conf
-sudo ldconfig
-```
-
-### Step 6: Install Caelestia CLI
-```bash
-cd ~
-git clone https://github.com/caelestia-dots/cli.git caelestia-cli
-cd caelestia-cli
-
-python3 -m build --wheel
-sudo pip3 install dist/*.whl --break-system-packages
-```
-
-### Step 7: Build Caelestia Shell
-```bash
-mkdir -p ~/.config/quickshell
-cd ~/.config/quickshell
-git clone https://github.com/caelestia-dots/shell.git caelestia
-cd caelestia
-
-PKG_CONFIG_PATH="/usr/local/lib/x86_64-linux-gnu/pkgconfig:$PKG_CONFIG_PATH" \
-cmake -B build -G Ninja \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_INSTALL_PREFIX=/
-
-cmake --build build
-sudo cmake --install build
-```
-
-Verify:
-```bash
-ls -la /usr/lib/qt6/qml/Caelestia/Services/
-```
-
-### Step 8: Configuration
-
-#### Environment Variables
-
-Add to `~/.bashrc`:
-```bash
-export QML_IMPORT_PATH=/usr/lib/qt6/qml
-```
-
-Add to `~/.config/hypr/hyprland.conf`:
-```bash
-env = QML_IMPORT_PATH,/usr/lib/qt6/qml
-```
-
-#### Wallpapers
-```bash
-mkdir -p ~/Pictures/Wallpapers
-# Add wallpapers to this directory
-```
-
-#### Shell Config
-
-Copy `config/shell.json` from this repo to `~/.config/caelestia/shell.json`, or create your own.
-
-Key settings:
-- `services.useFahrenheit`: `false` for Celsius
-- `services.gpuType`: `"intel"`, `"amd"`, or `"nvidia"`
-- `background.visualiser.enabled`: `false` to disable audio visualizer
-
-#### Color Theme
-
-Copy `config/quickshell/qml_color.json` from this repo to `~/.config/quickshell/qml_color.json`. This controls the Quickshell color scheme. Caelestia will regenerate this file when you change themes.
-
-## Running the Shell
-
-### Manual
-```bash
-caelestia shell -d
-```
-
-### Auto-start
-
-Add to `~/.config/hypr/hyprland.conf`:
-```bash
-exec-once = caelestia shell -d
-```
-
-## Troubleshooting
-
-### "CavaProvider is not a type"
-
-Rebuild both Quickshell and caelestia-shell with `PKG_CONFIG_PATH` set:
-```bash
-export PKG_CONFIG_PATH="/usr/local/lib/x86_64-linux-gnu/pkgconfig:$PKG_CONFIG_PATH"
-```
-
-### Files installing to /usr/usr/lib/
-
-Use `-DCMAKE_INSTALL_PREFIX=/` (not `/usr`).
-
-### QML module not found
-```bash
-export QML_IMPORT_PATH=/usr/lib/qt6/qml
-```
 ## Credits
 
-- [Caelestia Dots](https://github.com/caelestia-dots) - Original shell by Scout
-- [Hyprland](https://hyprland.org/) by [@vaxry](https://github.com/vaxerski) - Wayland compositor
-- [Quickshell](https://quickshell.outfoxxed.me/) by [@outfoxxed](https://github.com/outfoxxed) - Shell framework
-- [JaKooLit](https://github.com/JaKooLit) - Ubuntu Hyprland installer
+- [Caelestia Dots](https://github.com/caelestia-dots) - the shell, by Scout
+- [Hyprland](https://hyprland.org/) by [@vaxry](https://github.com/vaxerski)
+- [Quickshell](https://quickshell.outfoxxed.me/) by [@outfoxxed](https://github.com/outfoxxed)
 - [LukashonakV](https://github.com/LukashonakV) - libcava fork
+- [JaKooLit](https://github.com/JaKooLit) - Ubuntu Hyprland installer (25.10 route)
 
 ## License
 

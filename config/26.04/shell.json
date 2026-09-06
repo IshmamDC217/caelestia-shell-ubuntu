@@ -1,0 +1,16 @@
+{
+  "general": {
+    "apps": {
+      "terminal": ["kitty"],
+      "audio": ["pavucontrol"],
+      "explorer": ["nautilus"]
+    }
+  },
+  "services": {
+    "gpuType": "Auto",
+    "useFahrenheit": false
+  },
+  "paths": {
+    "wallpaperDir": "~/Pictures/Wallpapers"
+  }
+}
