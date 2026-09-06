@@ -42,7 +42,8 @@ sudo apt-get install -y \
     xdg-desktop-portal-hyprland \
     uwsm \
     waybar dunst fuzzel kitty wlogout swayosd nwg-displays nwg-look \
-    qt5ct qt6ct pavucontrol
+    qt5ct qt6ct pavucontrol \
+    hyprland-plugin-hyprexpo
 
 # `hyprland` ships hyprland-uwsm.desktop but neither Depends nor Recommends
 # uwsm, so the "Hyprland (uwsm-managed)" session at GDM fails without it.

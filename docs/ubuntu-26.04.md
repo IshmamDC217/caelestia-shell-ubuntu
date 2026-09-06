@@ -22,6 +22,7 @@ ones, not reconstructed from memory.
 - [Hyprland 0.53 config changes](#hyprland-053-config-changes)
 - [HiDPI scaling](#hidpi-scaling)
 - [Configuring the shell](#configuring-the-shell)
+- [Desktop overview and other JaKooLit extras](#desktop-overview-and-other-jakoolit-extras)
 - [Troubleshooting](#troubleshooting)
 - [Credits](#credits)
 
@@ -413,31 +414,78 @@ Two traps worth knowing:
 - Default apps are Arch-flavoured - `foot`, `thunar`, `pwvucontrol` - and none
   ship on Ubuntu. Override `general.apps`.
 
-The bundled [`shell.json`](../config/26.04/shell.json) is deliberately minimal
-and only overrides what Ubuntu needs, letting Caelestia default the rest. That
-survives upstream schema changes far better than a full copied config:
+Two configs ship here:
+
+| File | Use |
+|---|---|
+| [`config/26.04/shell.json`](../config/26.04/shell.json) | Full tuned config - transparency, bar layout, idle timeouts, battery warnings, launcher actions. Ported to the current schema. |
+| [`config/26.04/shell.minimal.json`](../config/26.04/shell.minimal.json) | Overrides only what Ubuntu needs and lets Caelestia default the rest. Survives upstream schema churn better; start here if the full one drifts. |
+
+The full config is the 25.10 one with every rejected key removed and the
+Ubuntu fixes applied, so it is a useful record of what still validates:
 
 ```json
 {
-  "general": {
-    "apps": {
-      "terminal": ["kitty"],
-      "audio": ["pavucontrol"],
-      "explorer": ["nautilus"]
-    }
-  },
-  "services": {
-    "gpuType": "Auto",
-    "useFahrenheit": false
-  },
-  "paths": {
-    "wallpaperDir": "~/Pictures/Wallpapers"
-  }
+  "general": { "apps": { "terminal": ["kitty"], "audio": ["pavucontrol"], "explorer": ["nautilus"] } },
+  "services": { "gpuType": "Auto", "useFahrenheit": false },
+  "paths": { "wallpaperDir": "~/Pictures/Wallpapers" }
 }
 ```
 
 Sizing and appearance are no longer file-driven - use the in-shell settings UI
 (`SUPER+N`, or the launcher's `>` prefix then Settings).
+
+---
+
+## Desktop overview and other JaKooLit extras
+
+If you are coming from the 25.10 route, a lot of what felt like "Caelestia"
+was actually **JaKooLit's config tree** layered underneath it, and this guide
+does not use JaKooLit at all. The most-missed binding is `SUPER+A`, which was
+JaKooLit's `OverviewToggle.sh` - not a Caelestia feature.
+
+26.04 packages a real overview plugin, so it is easy to get back:
+
+```bash
+sudo apt install hyprland-plugin-hyprexpo
+```
+
+```bash
+plugin = /usr/lib/x86_64-linux-gnu/hyprland/plugins/libhyprexpo.so
+
+plugin {
+    hyprexpo {
+        columns = 3
+        gap_size = 5
+        bg_col = rgb(11111b)
+        workspace_method = center current
+        enable_gesture = true
+        gesture_distance = 300
+        gesture_positive = true
+    }
+}
+
+bind = SUPER, A, hyprexpo:expo, toggle
+```
+
+> `Hyprland --verify-config` will report
+> `Invalid dispatcher, requested "hyprexpo:expo" does not exist`. **This is a
+> false positive** - the verifier does not load plugins. Check it at runtime
+> instead: `hyprctl plugin list` and `hyprctl dispatch hyprexpo:expo toggle`.
+
+Caelestia's own upstream bindings, for reference:
+
+| Bind | Action |
+|---|---|
+| `SUPER` (tap) | launcher |
+| `SUPER+K` | toggle all panels |
+| `SUPER+N` | sidebar |
+| `SUPER+L` | lock |
+| `CTRL+ALT+Delete` | session menu |
+| `CTRL+ALT+C` | clear notifications |
+
+26.04 also packages eight other Hyprland plugins (`hyprbars`, `hyprtrails`,
+`hyprscrolling`, `hyprwinwrap` and more) - `apt search hyprland-plugin`.
 
 ---
 
@@ -489,6 +537,11 @@ Hyprland's `auto` scale. See [HiDPI scaling](#hidpi-scaling).
 
 `sudo apt install qt6-image-formats-plugins`. Ubuntu installs only
 gif/ico/jpeg/svg decoders by default.
+
+### `SUPER+A` (or another old keybind) does nothing
+
+It was probably a JaKooLit binding, not a Caelestia one. See
+[Desktop overview](#desktop-overview-and-other-jakoolit-extras).
 
 ### A setting in shell.json does nothing
 
