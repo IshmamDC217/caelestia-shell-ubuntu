@@ -42,7 +42,7 @@ sudo apt-get install -y \
     xdg-desktop-portal-hyprland \
     uwsm \
     waybar dunst fuzzel kitty wlogout swayosd nwg-displays nwg-look \
-    qt5ct qt6ct
+    qt5ct qt6ct pavucontrol
 
 # `hyprland` ships hyprland-uwsm.desktop but neither Depends nor Recommends
 # uwsm, so the "Hyprland (uwsm-managed)" session at GDM fails without it.
@@ -62,7 +62,7 @@ step "Step 2/8: Build dependencies"
 sudo apt-get install -y \
     build-essential cmake ninja-build git pkg-config meson \
     qt6-base-dev qt6-declarative-dev qt6-svg-dev qt6-wayland-dev qt6-wayland \
-    qt6-shader-baker qt6-shadertools-dev libqt6svg6 \
+    qt6-shader-baker qt6-shadertools-dev libqt6svg6 qt6-image-formats-plugins \
     qt6-base-private-dev qt6-declarative-private-dev qt6-wayland-private-dev \
     libwayland-dev wayland-protocols libjemalloc-dev \
     libpipewire-0.3-dev libxcb1-dev libdrm-dev \

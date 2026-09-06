@@ -20,6 +20,8 @@ ones, not reconstructed from memory.
 - [Manual installation](#manual-installation)
 - [The Qt 6.10 problem](#the-qt-610-problem)
 - [Hyprland 0.53 config changes](#hyprland-053-config-changes)
+- [HiDPI scaling](#hidpi-scaling)
+- [Configuring the shell](#configuring-the-shell)
 - [Troubleshooting](#troubleshooting)
 - [Credits](#credits)
 
@@ -64,7 +66,7 @@ sudo apt install -y \
     hypridle hyprlock hyprpaper hyprpicker hyprpolkitagent \
     xdg-desktop-portal-hyprland uwsm \
     waybar dunst fuzzel kitty wlogout swayosd nwg-displays nwg-look \
-    qt5ct qt6ct
+    qt5ct qt6ct pavucontrol
 ```
 
 > **Do not skip `uwsm`.** The `hyprland` package installs a
@@ -83,7 +85,7 @@ the old `/usr/local` build first.** `/usr/local/bin` precedes `/usr/bin` on
 sudo apt install -y \
     build-essential cmake ninja-build git pkg-config meson \
     qt6-base-dev qt6-declarative-dev qt6-svg-dev qt6-wayland-dev qt6-wayland \
-    qt6-shader-baker qt6-shadertools-dev libqt6svg6 \
+    qt6-shader-baker qt6-shadertools-dev libqt6svg6 qt6-image-formats-plugins \
     qt6-base-private-dev qt6-declarative-private-dev qt6-wayland-private-dev \
     libwayland-dev wayland-protocols libjemalloc-dev \
     libpipewire-0.3-dev libxcb1-dev libdrm-dev \
@@ -108,6 +110,7 @@ dead:
 | `libpolkit-agent-1-dev` | `Package 'polkit-agent-1' not found` |
 | `libsensors-dev` | `Could not find SENSORS_LIBRARY` - `lm-sensors` is tools only |
 | `libiniparser-dev` | `iniparser library is required` (libcava) |
+| `qt6-image-formats-plugins` | `Failed to decode source: wallpaper.webp` - Ubuntu ships only gif/ico/jpeg/svg decoders, and Caelestia's default wallpaper is webp |
 
 ### Step 3: CascadiaCode Nerd Font
 
@@ -318,6 +321,85 @@ windowrule {
 
 ---
 
+## HiDPI scaling
+
+**This bites every high-DPI laptop.** Hyprland's `auto` scale guesses from
+physical size and guesses badly. On a 14" 2560x1440 panel (~211 DPI) it picks
+**2.0**, leaving just **1280x720** of logical space - text, buttons and the
+clock all render roughly 60% oversized. An external 1080p monitor at 81 DPI
+correctly gets 1.0, so the usual symptom is *"huge on the laptop, fine on the
+second monitor"*.
+
+Set it explicitly:
+
+```bash
+monitor = eDP-1, 2560x1440@60, 0x0,    1.6
+monitor = DP-2,  1920x1080@60, 1600x0, 1
+```
+
+**Use a scale that divides your resolution exactly**, or you get fractional
+scaling blur. Hyprland rounds the value to 2 decimal places, so `1.333333`
+silently becomes `1.33` - and 2560 / 1.33 = 1925.2, which is not clean.
+
+For 2560x1440:
+
+| Scale | Logical | Effective DPI | Feel |
+|---|---|---|---|
+| 1.25 | 2048x1152 | ~169 | small text, most space |
+| **1.6** | **1600x900** | **~132** | **comfortable - good default** |
+| 2.0 | 1280x720 | ~105 | what `auto` picks; too large |
+
+Note the second monitor's `x` offset must match the first one's **logical**
+width, not its pixel width - `1600x0` above, not `2560x0`.
+
+Keep per-machine layout in `~/.config/hypr/monitors.conf` (generate it with
+`nwg-displays`) and `source` it, so the rest of your config stays portable.
+
+## Configuring the shell
+
+Caelestia's config schema moves fast, and **an out-of-date `shell.json` fails
+silently** - unknown keys are logged as warnings and ignored, so settings
+appear to do nothing. Check with:
+
+```bash
+caelestia shell -l | grep -i warn
+```
+
+Two traps worth knowing:
+
+- `services.gpuType` is an **enum**: `Auto`, `Nvidia`, `Generic`, `None`.
+  Values like `"intel"` are rejected outright. Use `Auto` for Intel and AMD.
+- Default apps are Arch-flavoured - `foot`, `thunar`, `pwvucontrol` - and none
+  ship on Ubuntu. Override `general.apps`.
+
+The bundled [`shell.json`](../config/26.04/shell.json) is deliberately minimal
+and only overrides what Ubuntu needs, letting Caelestia default the rest. That
+survives upstream schema changes far better than a full copied config:
+
+```json
+{
+  "general": {
+    "apps": {
+      "terminal": ["kitty"],
+      "audio": ["pavucontrol"],
+      "explorer": ["nautilus"]
+    }
+  },
+  "services": {
+    "gpuType": "Auto",
+    "useFahrenheit": false
+  },
+  "paths": {
+    "wallpaperDir": "~/Pictures/Wallpapers"
+  }
+}
+```
+
+Sizing and appearance are no longer file-driven - use the in-shell settings UI
+(`SUPER+N`, or the launcher's `>` prefix then Settings).
+
+---
+
 ## Troubleshooting
 
 ### The shell will not start
@@ -347,6 +429,20 @@ Use `-DCMAKE_INSTALL_PREFIX=/`, not `/usr`.
 ### `VERSION is not set and failed to get from git`
 
 Shallow clone. `git fetch --unshallow --tags`.
+
+### Everything is huge on the laptop but fine on the external monitor
+
+Hyprland's `auto` scale. See [HiDPI scaling](#hidpi-scaling).
+
+### `Failed to decode source: wallpaper.webp`
+
+`sudo apt install qt6-image-formats-plugins`. Ubuntu installs only
+gif/ico/jpeg/svg decoders by default.
+
+### A setting in shell.json does nothing
+
+It is probably an unknown key from an older schema. `caelestia shell -l | grep -i warn`
+lists every rejected option. See [Configuring the shell](#configuring-the-shell).
 
 ### Wallpapers do not appear
 

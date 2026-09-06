@@ -35,6 +35,11 @@ Qt 6.11. Three things break, and this repo carries a
 [89-line patch](patches/qt6.10-compat.patch) that fixes all of them - fully
 explained in [the 26.04 guide](docs/ubuntu-26.04.md#the-qt-610-problem).
 
+**HiDPI laptops need a manual scale.** Hyprland's `auto` picks 2.0 on a 14"
+QHD panel, leaving 1280x720 of logical space and making everything look
+oversized on the laptop while an external monitor looks fine. The guide covers
+[which scales are safe](docs/ubuntu-26.04.md#hidpi-scaling).
+
 **Hyprland 0.53 changed its config schema.** The `gestures {}` block and
 one-line `windowrule =` are both gone. The bundled
 [`hyprland.conf`](config/26.04/hyprland.conf) is self-contained, uses the new
