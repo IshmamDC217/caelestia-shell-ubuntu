@@ -32,7 +32,7 @@ third-party installer the 25.10 guide relied on is no longer needed.
 
 **Qt is one version too old.** 26.04 ships Qt 6.10.2; current Caelestia needs
 Qt 6.11. Three things break, and this repo carries a
-[89-line patch](patches/qt6.10-compat.patch) that fixes all of them - fully
+[small patch](patches/qt6.10-compat.patch) that fixes all of them - fully
 explained in [the 26.04 guide](docs/ubuntu-26.04.md#the-qt-610-problem).
 
 **Nothing supervises the shell.** Upstream autostarts it once at login, so a
