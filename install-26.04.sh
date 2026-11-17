@@ -25,6 +25,9 @@ die()   { err "$@"; exit 1; }
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BUILD_DIR="$HOME/caelestia-build"
 SHELL_DIR="$HOME/.config/quickshell/caelestia"
+# The Qt 6.10 patch is tested against this commit; bump it together with the
+# patch. Can be overridden from the environment.
+CAELESTIA_REF="${CAELESTIA_REF:-e72df8eb}"
 
 # Sanity: this script only claims to work on 26.04.
 if ! grep -q 'VERSION_ID="26.04"' /etc/os-release 2>/dev/null; then
@@ -192,8 +195,26 @@ ok "Caelestia CLI installed"
 step "Step 7/8: Caelestia Shell (+ Qt 6.10 compatibility patch)"
 
 mkdir -p ~/.config/quickshell
+PATCH="$SCRIPT_DIR/patches/qt6.10-compat.patch"
 if [[ -d "$SHELL_DIR/.git" ]]; then
-    cd "$SHELL_DIR" && git pull --ff-only || true
+    cd "$SHELL_DIR"
+    git rev-parse --quiet --verify "${CAELESTIA_REF}^{commit}" >/dev/null || git fetch --tags origin
+    if ! git diff --cached --quiet; then
+        die "Staged changes in $SHELL_DIR; unstage (git reset) or commit them and rerun."
+    fi
+    if ! git diff --quiet HEAD --; then
+        patch_removed=false
+        if git apply --reverse --check "$PATCH" 2>/dev/null; then
+            git apply --reverse "$PATCH"
+            patch_removed=true
+        fi
+        if ! git diff --quiet HEAD --; then
+            if [[ "$patch_removed" == true ]]; then
+                git apply "$PATCH"
+            fi
+            die "Uncommitted changes in $SHELL_DIR besides the Qt 6.10 patch. Commit or stash them and rerun."
+        fi
+    fi
 else
     # Full clone: a shallow one has no tags, and the build reads VERSION from
     # `git describe`, failing with "VERSION is not set and failed to get from git".
@@ -201,19 +222,26 @@ else
     cd "$SHELL_DIR"
 fi
 
+if ! git checkout --detach "$CAELESTIA_REF"; then
+    die "Could not check out Caelestia shell at $CAELESTIA_REF in $SHELL_DIR."
+fi
+ok "Caelestia shell at $CAELESTIA_REF"
+
 # Ubuntu 26.04 ships Qt 6.10.2; current Caelestia targets Qt 6.11.
-if git apply --check "$SCRIPT_DIR/patches/qt6.10-compat.patch" 2>/dev/null; then
-    git apply "$SCRIPT_DIR/patches/qt6.10-compat.patch"
+if git apply --check "$PATCH" 2>/dev/null; then
+    git apply "$PATCH"
     ok "Applied Qt 6.10 compatibility patch"
-elif git apply --reverse --check "$SCRIPT_DIR/patches/qt6.10-compat.patch" 2>/dev/null; then
+elif git apply --reverse --check "$PATCH" 2>/dev/null; then
     ok "Qt 6.10 compatibility patch already applied"
 else
-    warn "Patch did not apply cleanly against this Caelestia revision."
-    warn "Upstream has probably moved; see docs/ubuntu-26.04.md for what it fixes."
+    die "The Qt 6.10 compatibility patch does not apply to $CAELESTIA_REF. Building without it gives a blank Hyprland screen on Qt 6.10; see docs/ubuntu-26.04.md."
 fi
 
+# Without this the plugin lands in /usr/lib/qt6/qml, which Ubuntu's Qt does
+# not search, leaving a stale copy behind.
 PKG_CONFIG_PATH="/usr/local/lib/x86_64-linux-gnu/pkgconfig:${PKG_CONFIG_PATH:-}" \
-cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/ \
+    -DINSTALL_QMLDIR=/usr/lib/x86_64-linux-gnu/qt6/qml
 cmake --build build
 sudo cmake --install build
 ok "Caelestia Shell installed"

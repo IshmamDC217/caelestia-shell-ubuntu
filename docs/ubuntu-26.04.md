@@ -230,11 +230,15 @@ mkdir -p ~/.config/quickshell
 git clone https://github.com/caelestia-dots/shell.git ~/.config/quickshell/caelestia
 cd ~/.config/quickshell/caelestia
 
+# The Qt 6.10 patch is tested against this commit.
+git checkout --detach e72df8eb
+
 # Required on 26.04 - see "The Qt 6.10 problem" below
 git apply /path/to/caelestia-shell-ubuntu/patches/qt6.10-compat.patch
 
 PKG_CONFIG_PATH="/usr/local/lib/x86_64-linux-gnu/pkgconfig:$PKG_CONFIG_PATH" \
-cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/ \
+    -DINSTALL_QMLDIR=/usr/lib/x86_64-linux-gnu/qt6/qml
 cmake --build build
 sudo cmake --install build
 ```
@@ -268,8 +272,8 @@ it works on a bare 26.04 install. It sets `QML_IMPORT_PATH`, autostarts
 
 **Ubuntu 26.04 ships Qt 6.10.2. Current Caelestia Shell targets Qt 6.11.**
 Three independent things break. All are fixed by
-[`patches/qt6.10-compat.patch`](../patches/qt6.10-compat.patch) (3 files, 89
-lines), verified against Caelestia `v2.4.0-26-g7a527214`.
+[`patches/qt6.10-compat.patch`](../patches/qt6.10-compat.patch) (3 files),
+verified against Caelestia `e72df8eb`.
 
 ### 1. `DoubleSpinBox` does not exist
 
@@ -298,7 +302,9 @@ Cannot assign to non-existent property "indicator"
 ```
 
 Caelestia uses `id: char`. Qt 6.10's QML parser treats `char` as reserved;
-6.11 relaxed this. The patch renames it to `charItem`.
+6.11 relaxed this. The patch renames all 13 uses of `char` to `charItem` in
+`modules/lock/center/InputField.qml`. Upstream declined the rename (they
+support only Qt >= 6.11), so the patch keeps carrying it.
 
 ### 3. `RectangularShadow` has no per-corner radii
 
