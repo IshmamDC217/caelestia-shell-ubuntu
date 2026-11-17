@@ -657,6 +657,20 @@ prefer it to an absolute path with a username baked in.
 
 `sudo apt install uwsm`, or pick the plain "Hyprland" session. See Step 1.
 
+### "Failed unit detected: waybar.service / hypridle.service" at login
+
+Ubuntu's `waybar` and `hypridle` packages enable their user units for *every*
+graphical session, GNOME included. Under GNOME waybar exits with
+`compositor does not support wlr-layer-shell` and hypridle aborts with
+`Could not find config`; both crash-loop and FUMonitor reports them. Caelestia
+already provides the bar and idle handling, so mask them (the install script
+does this):
+
+```bash
+systemctl --user mask waybar.service hypridle.service
+systemctl --user reset-failed
+```
+
 ---
 
 ## Credits

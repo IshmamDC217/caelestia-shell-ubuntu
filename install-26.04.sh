@@ -257,6 +257,16 @@ systemctl --user enable caelestia-shell.service 2>/dev/null \
     && ok "Shell supervised by systemd (auto-restarts on crash)" \
     || warn "Could not enable caelestia-shell.service"
 
+# Ubuntu's waybar and hypridle packages enable their user units globally
+# (/etc/systemd/user/graphical-session.target.wants), so they start in EVERY
+# graphical session. Under GNOME waybar dies with "compositor does not support
+# wlr-layer-shell" and hypridle aborts with no config, each crash-looping into
+# failure notifications at login. Caelestia already provides the bar and idle
+# handling, so mask both for this user (undo with `systemctl --user unmask`).
+systemctl --user mask waybar.service hypridle.service >/dev/null 2>&1 \
+    && ok "Masked waybar/hypridle user units (Caelestia replaces them)" \
+    || warn "Could not mask waybar.service / hypridle.service"
+
 if Hyprland --verify-config 2>&1 | grep -q "config ok"; then
     ok "Hyprland config verified"
 else
