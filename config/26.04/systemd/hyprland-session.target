@@ -1,0 +1,9 @@
+[Unit]
+Description=Hyprland session services (Caelestia)
+Documentation=https://github.com/caelestia-dots/shell
+# Started by exec-once and stopped by exec-shutdown in hyprland.conf, so the
+# services below live exactly as long as Hyprland does. A plain (non-uwsm)
+# Hyprland session never starts or stops graphical-session.target, so binding
+# to that instead would leave them running after logout, crash-looping with no
+# display and then reattaching to whatever session (GNOME) comes next.
+Wants=caelestia-shell.service hyprpolkitagent.service
