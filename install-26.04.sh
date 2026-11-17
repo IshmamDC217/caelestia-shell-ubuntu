@@ -195,16 +195,23 @@ ok "Caelestia CLI installed"
 step "Step 7/8: Caelestia Shell (+ Qt 6.10 compatibility patch)"
 
 mkdir -p ~/.config/quickshell
+PATCH="$SCRIPT_DIR/patches/qt6.10-compat.patch"
 if [[ -d "$SHELL_DIR/.git" ]]; then
     cd "$SHELL_DIR"
-    git fetch --tags origin
-    if [[ -n "$(git status --porcelain)" ]]; then
-        if git apply --reverse --check "$SCRIPT_DIR/patches/qt6.10-compat.patch" 2>/dev/null; then
-            git checkout -- .
-            rm -f components/controls/DoubleSpinBox.qml
-        else
-            die "Uncommitted changes in $SHELL_DIR are not just the Qt 6.10 patch. Commit or stash them and rerun."
+    git rev-parse --quiet --verify "${CAELESTIA_REF}^{commit}" >/dev/null || git fetch --tags origin
+    if ! git diff --cached --quiet; then
+        die "Staged changes in $SHELL_DIR; unstage (git reset) or commit them and rerun."
+    fi
+    patch_removed=false
+    if git apply --reverse --check "$PATCH" 2>/dev/null; then
+        git apply --reverse "$PATCH"
+        patch_removed=true
+    fi
+    if ! git diff --quiet HEAD --; then
+        if [[ "$patch_removed" == true ]]; then
+            git apply "$PATCH"
         fi
+        die "Uncommitted changes in $SHELL_DIR besides the Qt 6.10 patch. Commit or stash them and rerun."
     fi
 else
     # Full clone: a shallow one has no tags, and the build reads VERSION from
@@ -219,10 +226,10 @@ fi
 ok "Caelestia shell at $CAELESTIA_REF"
 
 # Ubuntu 26.04 ships Qt 6.10.2; current Caelestia targets Qt 6.11.
-if git apply --check "$SCRIPT_DIR/patches/qt6.10-compat.patch" 2>/dev/null; then
-    git apply "$SCRIPT_DIR/patches/qt6.10-compat.patch"
+if git apply --check "$PATCH" 2>/dev/null; then
+    git apply "$PATCH"
     ok "Applied Qt 6.10 compatibility patch"
-elif git apply --reverse --check "$SCRIPT_DIR/patches/qt6.10-compat.patch" 2>/dev/null; then
+elif git apply --reverse --check "$PATCH" 2>/dev/null; then
     ok "Qt 6.10 compatibility patch already applied"
 else
     die "The Qt 6.10 compatibility patch does not apply to $CAELESTIA_REF. Building without it gives a blank Hyprland screen on Qt 6.10; see docs/ubuntu-26.04.md."
