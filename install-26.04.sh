@@ -202,16 +202,18 @@ if [[ -d "$SHELL_DIR/.git" ]]; then
     if ! git diff --cached --quiet; then
         die "Staged changes in $SHELL_DIR; unstage (git reset) or commit them and rerun."
     fi
-    patch_removed=false
-    if git apply --reverse --check "$PATCH" 2>/dev/null; then
-        git apply --reverse "$PATCH"
-        patch_removed=true
-    fi
     if ! git diff --quiet HEAD --; then
-        if [[ "$patch_removed" == true ]]; then
-            git apply "$PATCH"
+        patch_removed=false
+        if git apply --reverse --check "$PATCH" 2>/dev/null; then
+            git apply --reverse "$PATCH"
+            patch_removed=true
         fi
-        die "Uncommitted changes in $SHELL_DIR besides the Qt 6.10 patch. Commit or stash them and rerun."
+        if ! git diff --quiet HEAD --; then
+            if [[ "$patch_removed" == true ]]; then
+                git apply "$PATCH"
+            fi
+            die "Uncommitted changes in $SHELL_DIR besides the Qt 6.10 patch. Commit or stash them and rerun."
+        fi
     fi
 else
     # Full clone: a shallow one has no tags, and the build reads VERSION from
