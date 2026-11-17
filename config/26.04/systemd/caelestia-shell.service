@@ -1,21 +1,25 @@
 [Unit]
 Description=Caelestia Shell (Quickshell)
 Documentation=https://github.com/caelestia-dots/shell
-PartOf=graphical-session.target
-After=graphical-session.target
+# Pulled in and stopped by hyprland-session.target (see that file).
+PartOf=hyprland-session.target
+After=hyprland-session.target
+# Do not fight a genuinely broken config: give up after 5 crashes in 5 minutes.
+# (These are [Unit] keys; systemd ignores them under [Service].)
+StartLimitBurst=5
+StartLimitIntervalSec=300
 
 [Service]
 Type=simple
 Environment=QML_IMPORT_PATH=/usr/lib/qt6/qml
+# Only run while a live Hyprland is listening. If Hyprland exits without
+# running exec-shutdown (a crash), the next restart attempt is skipped here
+# and the unit goes inactive instead of crash-looping into "failed". It also
+# stops a stale HYPRLAND_INSTANCE_SIGNATURE starting the shell under GNOME.
+ExecCondition=/bin/sh -c 'timeout 3 /usr/bin/hyprctl version >/dev/null 2>&1'
 ExecStart=/usr/bin/qs -c caelestia -n
 # The shell has segfaulted in libQt6Core at least once; without this the bar
 # simply disappears until it is relaunched by hand.
 Restart=on-failure
 RestartSec=2
-# Do not fight a genuinely broken config: give up after 5 crashes in 5 minutes.
-StartLimitBurst=5
-StartLimitIntervalSec=300
 Slice=session.slice
-
-[Install]
-WantedBy=graphical-session.target

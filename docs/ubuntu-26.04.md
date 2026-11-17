@@ -503,30 +503,51 @@ A systemd user service fixes that. Install
 to `~/.config/systemd/user/`:
 
 ```ini
+[Unit]
+PartOf=hyprland-session.target
+After=hyprland-session.target
+StartLimitBurst=5
+StartLimitIntervalSec=300
+
 [Service]
 Type=simple
 Environment=QML_IMPORT_PATH=/usr/lib/qt6/qml
+ExecCondition=/bin/sh -c 'timeout 3 /usr/bin/hyprctl version >/dev/null 2>&1'
 ExecStart=/usr/bin/qs -c caelestia -n
 Restart=on-failure
 RestartSec=2
-StartLimitBurst=5
-StartLimitIntervalSec=300
 ```
 
 The burst limit matters: without it, a genuinely broken config gets restarted
-in a tight loop forever instead of failing visibly.
+in a tight loop forever instead of failing visibly. It belongs under `[Unit]`;
+under `[Service]` systemd ignores `StartLimitIntervalSec`.
 
-Then replace the `exec-once` line in `hyprland.conf`:
+**Bind it to Hyprland, not to `graphical-session.target`.** A plain (non-uwsm)
+Hyprland session never starts or stops `graphical-session.target`, but GNOME
+does. Hang the shell off it (`WantedBy=graphical-session.target` +
+`systemctl --user enable`) and it starts inside GNOME; and when you log out of
+Hyprland nothing stops it, so it crash-loops with no display ("no Qt platform
+plugin could be initialized") until it is marked failed. Instead, also install
+[`hyprland-session.target`](../config/26.04/systemd/hyprland-session.target)
+(which `Wants=` the shell and `hyprpolkitagent`) and the
+[`hyprpolkitagent` drop-in](../config/26.04/systemd/hyprpolkitagent.service.d/hyprland-only.conf)
+to `~/.config/systemd/user/`. The `ExecCondition` makes both skip quietly,
+rather than fail, whenever `hyprctl` cannot reach a running Hyprland (a stale socket file left behind is not enough) - which also covers a
+Hyprland crash, where `exec-shutdown` never runs.
+
+Then replace the `exec-once` lines in `hyprland.conf` (drop the old
+`exec-once = systemctl --user start hyprpolkitagent`; the target starts it):
 
 ```bash
-exec-once = bash -c 'systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP HYPRLAND_INSTANCE_SIGNATURE && systemctl --user start caelestia-shell.service'
+exec-once = bash -c 'systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP HYPRLAND_INSTANCE_SIGNATURE && systemctl --user start hyprland-session.target'
+exec-shutdown = bash -c 'systemctl --user stop hyprland-session.target xdg-desktop-portal-hyprland.service; systemctl --user unset-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP HYPRLAND_INSTANCE_SIGNATURE'
 ```
 
 > **The `import-environment` step is required.** A plain (non-uwsm) Hyprland
 > session does not populate the systemd user manager with `WAYLAND_DISPLAY` or
 > `HYPRLAND_INSTANCE_SIGNATURE`, so the service starts with no display to
 > connect to and fails immediately. Under a **uwsm** session this is handled
-> for you and the line can be just `systemctl --user start caelestia-shell.service`.
+> for you and the line can be just `systemctl --user start hyprland-session.target`.
 
 Manage it with:
 
@@ -668,6 +689,23 @@ does this):
 
 ```bash
 systemctl --user mask waybar.service hypridle.service
+systemctl --user reset-failed
+```
+
+### "Failed unit detected: caelestia-shell / hyprpolkitagent" after leaving Hyprland
+
+The log shows `This application failed to start because no Qt platform plugin
+could be initialized`, and the bar may even reappear inside GNOME afterwards.
+The services outlived Hyprland: they were started from `exec-once` with nothing
+to stop them, and the Hyprland variables stayed in the systemd environment.
+Install `hyprland-session.target`, the `hyprpolkitagent` drop-in and the
+`exec-shutdown` line from [Keeping the shell running](#keeping-the-shell-running),
+then clean up the current session:
+
+```bash
+systemctl --user disable caelestia-shell.service
+systemctl --user daemon-reload
+systemctl --user stop caelestia-shell.service hyprpolkitagent.service
 systemctl --user reset-failed
 ```
 

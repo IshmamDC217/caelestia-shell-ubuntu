@@ -250,12 +250,21 @@ install_config "$SCRIPT_DIR/config/26.04/qt6ct/qt6ct.conf" ~/.config/qt6ct/qt6ct
 # Supervise the shell. Upstream's `exec-once = caelestia shell -d` runs once at
 # login, so a crash leaves no bar until it is relaunched by hand.
 mkdir -p ~/.config/systemd/user
+# The shell and hyprpolkitagent are bound to hyprland-session.target, which
+# hyprland.conf starts with exec-once and stops with exec-shutdown, so they
+# never outlive Hyprland or leak into a GNOME session. Do NOT `enable` the
+# shell: that would hang it off graphical-session.target, which GNOME starts.
 install_config "$SCRIPT_DIR/config/26.04/systemd/caelestia-shell.service" \
     ~/.config/systemd/user/caelestia-shell.service
+install_config "$SCRIPT_DIR/config/26.04/systemd/hyprland-session.target" \
+    ~/.config/systemd/user/hyprland-session.target
+mkdir -p ~/.config/systemd/user/hyprpolkitagent.service.d
+install_config "$SCRIPT_DIR/config/26.04/systemd/hyprpolkitagent.service.d/hyprland-only.conf" \
+    ~/.config/systemd/user/hyprpolkitagent.service.d/hyprland-only.conf
 systemctl --user daemon-reload 2>/dev/null || true
-systemctl --user enable caelestia-shell.service 2>/dev/null \
-    && ok "Shell supervised by systemd (auto-restarts on crash)" \
-    || warn "Could not enable caelestia-shell.service"
+# Earlier versions of this script enabled it; undo that on re-runs.
+systemctl --user disable caelestia-shell.service >/dev/null 2>&1 || true
+ok "Shell supervised by systemd (auto-restarts on crash, stops with Hyprland)"
 
 # Ubuntu's waybar and hypridle packages enable their user units globally
 # (/etc/systemd/user/graphical-session.target.wants), so they start in EVERY
