@@ -25,6 +25,7 @@ ones, not reconstructed from memory.
 - [Desktop overview and other JaKooLit extras](#desktop-overview-and-other-jakoolit-extras)
 - [Keeping the shell running](#keeping-the-shell-running)
 - [Qt icon themes](#qt-icon-themes)
+- [Dark mode for Qt and GTK apps](#dark-mode-for-qt-and-gtk-apps)
 - [Troubleshooting](#troubleshooting)
 - [Credits](#credits)
 
@@ -98,7 +99,7 @@ sudo apt install -y \
     libiniparser-dev libfftw3-dev libasound2-dev libpulse-dev \
     python3-pip python3-build python3-hatchling \
     libnotify-bin grim slurp wl-clipboard fish brightnessctl ddcutil \
-    lm-sensors swappy unzip wget
+    lm-sensors swappy unzip wget xz-utils
 ```
 
 Seven of these are **not** in the 25.10 guide, and each one stops the build
@@ -253,6 +254,17 @@ mkdir -p ~/.config/caelestia ~/.config/hypr ~/Pictures/Wallpapers
 cp config/26.04/shell.json ~/.config/caelestia/shell.json
 cp config/26.04/quickshell/qml_color.json ~/.config/quickshell/qml_color.json
 cp config/26.04/hyprland.conf ~/.config/hypr/hyprland.conf
+
+mkdir -p ~/.config/qt6ct
+cp config/26.04/qt6ct/qt6ct.conf ~/.config/qt6ct/qt6ct.conf
+
+# adw-gtk3: the GTK 3 theme caelestia-cli hardcodes; Ubuntu does not package
+# it. See "Dark mode for Qt and GTK apps" below.
+ADW_GTK3_VERSION=v6.5
+mkdir -p ~/.local/share/themes
+wget -O /tmp/adw-gtk3.tar.xz https://github.com/lassekongo83/adw-gtk3/releases/download/${ADW_GTK3_VERSION}/adw-gtk3${ADW_GTK3_VERSION}.tar.xz
+tar -xJf /tmp/adw-gtk3.tar.xz -C ~/.local/share/themes
+rm /tmp/adw-gtk3.tar.xz
 
 Hyprland --verify-config   # should print "config ok"
 ```
@@ -569,13 +581,59 @@ sudo apt install papirus-icon-theme
 
 ```ini
 [Appearance]
+color_scheme_path=/usr/share/qt6ct/colors/darker.conf
+custom_palette=true
 icon_theme=Papirus-Dark
 style=Fusion
 ```
 
+The two palette keys give Qt apps a dark palette; see
+[Dark mode for Qt and GTK apps](#dark-mode-for-qt-and-gtk-apps).
+
 The bundled `hyprland.conf` already exports `QT_QPA_PLATFORMTHEME=qt6ct`, so
 this takes effect on the next shell restart. `Yaru`, shipped with Ubuntu, also
 works if you would rather not add a package.
+
+---
+
+## Dark mode for Qt and GTK apps
+
+With Caelestia in dark mode, Qt and GTK 3 windows can still come up white. Two
+separate causes:
+
+**Qt: Fusion's default palette is light.** `qt6ct` with `style=Fusion` and no
+colour scheme gets Fusion's built-in **light** palette, so every Qt 6 app
+renders white - the `hyprpolkitagent` password dialog is the most visible
+example. The bundled `qt6ct.conf` sets a dark palette on top of Fusion:
+
+```ini
+[Appearance]
+color_scheme_path=/usr/share/qt6ct/colors/darker.conf
+custom_palette=true
+```
+
+`darker.conf` ships with the `qt6ct` package.
+
+**GTK 3: the theme caelestia-cli asks for is not installed.** Every time it
+applies a scheme, `caelestia-cli` hardcodes
+`dconf write /org/gnome/desktop/interface/gtk-theme 'adw-gtk3-dark'`
+(`caelestia/utils/theme.py`, `apply_gtk`). Ubuntu does not package adw-gtk3,
+so GTK 3 apps - `nwg-displays` for one - silently fall back to light Adwaita.
+Install it into `~/.local/share/themes`:
+
+```bash
+ADW_GTK3_VERSION=v6.5
+mkdir -p ~/.local/share/themes
+wget -O /tmp/adw-gtk3.tar.xz https://github.com/lassekongo83/adw-gtk3/releases/download/${ADW_GTK3_VERSION}/adw-gtk3${ADW_GTK3_VERSION}.tar.xz
+tar -xJf /tmp/adw-gtk3.tar.xz -C ~/.local/share/themes
+rm /tmp/adw-gtk3.tar.xz
+```
+
+> **Known limitation:** the qt6ct palette is static. Qt apps stay dark when
+> Caelestia is switched to light mode, because Caelestia writes its Qt colours
+> for a `qtengine` platform theme that Ubuntu does not ship. GTK 3 apps likewise
+> stay on adw-gtk3-dark in light mode, because caelestia-cli writes that theme
+> name regardless of mode.
 
 ---
 
@@ -617,6 +675,27 @@ Nothing supervises the shell by default. See
 ### `Could not load icon ...` warnings, blank tray icons
 
 Qt is not picking up an icon theme. See [Qt icon themes](#qt-icon-themes).
+
+### Qt or GTK windows are white in dark mode
+
+`install_config` never overwrites existing files, so installs made before this
+fix kept the old `qt6ct.conf` and never got adw-gtk3. Add the two palette keys
+by hand under `[Appearance]` in `~/.config/qt6ct/qt6ct.conf`:
+
+```ini
+color_scheme_path=/usr/share/qt6ct/colors/darker.conf
+custom_palette=true
+```
+
+Then install adw-gtk3 with the commands in
+[Dark mode for Qt and GTK apps](#dark-mode-for-qt-and-gtk-apps), then restart
+the affected apps. Re-running `./install-26.04.sh` also installs adw-gtk3, but
+it skips existing config files, so the qt6ct keys still need adding by hand.
+For the password dialog:
+
+```bash
+systemctl --user restart hyprpolkitagent.service
+```
 
 ### The bar shows words like `terminal`, `web`, `ndar_r` instead of icons
 

@@ -73,7 +73,7 @@ sudo apt-get install -y \
     libiniparser-dev libfftw3-dev libasound2-dev libpulse-dev \
     python3-pip python3-build python3-hatchling \
     libnotify-bin grim slurp wl-clipboard fish brightnessctl ddcutil \
-    lm-sensors swappy unzip wget
+    lm-sensors swappy unzip wget xz-utils
 
 ok "Build dependencies installed"
 
@@ -241,11 +241,39 @@ install_config "$SCRIPT_DIR/config/26.04/shell.json"  ~/.config/caelestia/shell.
 install_config "$SCRIPT_DIR/config/26.04/quickshell/qml_color.json" ~/.config/quickshell/qml_color.json
 install_config "$SCRIPT_DIR/config/26.04/hyprland.conf" ~/.config/hypr/hyprland.conf
 
-# Qt apps under Hyprland do NOT inherit GNOME's icon theme. Without this every
-# QIcon::fromTheme lookup falls through to hicolor and the shell logs
-# "Could not load icon ..." with blank tray/status icons.
+# Qt apps under Hyprland do NOT inherit GNOME's icon theme or its dark
+# palette. Without this every QIcon::fromTheme lookup falls through to hicolor
+# and the shell logs "Could not load icon ..." with blank tray/status icons,
+# and Fusion renders its default LIGHT palette (white password dialogs).
 mkdir -p ~/.config/qt6ct
 install_config "$SCRIPT_DIR/config/26.04/qt6ct/qt6ct.conf" ~/.config/qt6ct/qt6ct.conf
+
+# caelestia-cli hardcodes `dconf write /org/gnome/desktop/interface/gtk-theme
+# 'adw-gtk3-dark'` every time it applies a scheme (caelestia/utils/theme.py,
+# apply_gtk), but Ubuntu does not package adw-gtk3. Without the theme every
+# GTK 3 app (e.g. nwg-displays) ignores the dark setting and falls back to
+# light Adwaita.
+ADW_GTK3_VERSION=v6.5
+if [[ -f ~/.local/share/themes/adw-gtk3-dark/gtk-3.0/gtk.css ]]; then
+    ok "adw-gtk3 already installed"
+else
+    ADW_TMP="$(mktemp -d)"
+    trap 'rm -rf "${FONT_TMP:-}" "${ADW_TMP:-}"' EXIT
+    if wget -q --show-progress -O "$ADW_TMP/adw-gtk3.tar.xz" \
+        "https://github.com/lassekongo83/adw-gtk3/releases/download/${ADW_GTK3_VERSION}/adw-gtk3${ADW_GTK3_VERSION}.tar.xz" \
+        && tar -xJf "$ADW_TMP/adw-gtk3.tar.xz" -C "$ADW_TMP" \
+        && [[ -f "$ADW_TMP/adw-gtk3-dark/gtk-3.0/gtk.css" ]] \
+        && mkdir -p ~/.local/share/themes \
+        && (for theme in adw-gtk3 adw-gtk3-dark; do
+                rm -rf ~/.local/share/themes/"$theme" || exit 1
+                mv "$ADW_TMP/$theme" ~/.local/share/themes/ || exit 1
+            done); then
+        ok "adw-gtk3 ${ADW_GTK3_VERSION} installed to ~/.local/share/themes"
+    else
+        warn "Could not install adw-gtk3; GTK 3 apps will stay light"
+    fi
+    rm -rf "$ADW_TMP"
+fi
 
 # Supervise the shell. Upstream's `exec-once = caelestia shell -d` runs once at
 # login, so a crash leaves no bar until it is relaunched by hand.
